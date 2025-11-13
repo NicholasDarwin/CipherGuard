@@ -171,25 +171,77 @@ VULNERABILITY_PATTERNS = {
     },
 }
 
-def clone_repo(repo_url):
-    """Clone a GitHub repository to a temporary directory."""
+def parse_github_url(repo_url):
+    """Parse GitHub URL to extract owner and repo name."""
+    import re
+    patterns = [
+        r'github\.com[/:]([^/]+)/([^/.]+?)(?:\.git)?$',
+        r'github\.com[/:]([^/]+)/([^/.]+?)/?$'
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, repo_url)
+        if match:
+            return match.group(1), match.group(2)
+    return None, None
+
+def download_repo_via_api(repo_url):
+    """Download repository files using GitHub API (no git required)."""
+    import requests
+    import zipfile
+    import io
+    
+    owner, repo = parse_github_url(repo_url)
+    if not owner or not repo:
+        return None, "Invalid GitHub URL format"
+    
     try:
-        import subprocess
+        # Download the default branch as a zip
+        zip_url = f"https://api.github.com/repos/{owner}/{repo}/zipball"
+        headers = {'Accept': 'application/vnd.github+json'}
+        
+        response = requests.get(zip_url, headers=headers, timeout=60, allow_redirects=True)
+        
+        if response.status_code == 404:
+            return None, "Repository not found or is private"
+        elif response.status_code != 200:
+            return None, f"GitHub API error: {response.status_code}"
+        
+        # Extract to temp directory
         temp_dir = tempfile.mkdtemp(prefix='repo_')
-        result = subprocess.run(
-            ['git', 'clone', '--depth', '1', repo_url, temp_dir], 
-            capture_output=True, 
-            timeout=180, 
-            check=True,
-            text=True
-        )
+        
+        with zipfile.ZipFile(io.BytesIO(response.content)) as zf:
+            # Get the root folder name in the zip
+            root_folder = zf.namelist()[0].split('/')[0]
+            
+            for member in zf.namelist():
+                # Skip the root folder itself
+                if member == root_folder + '/':
+                    continue
+                
+                # Remove the root folder from the path
+                relative_path = '/'.join(member.split('/')[1:])
+                if not relative_path:
+                    continue
+                
+                target_path = os.path.join(temp_dir, relative_path)
+                
+                if member.endswith('/'):
+                    os.makedirs(target_path, exist_ok=True)
+                else:
+                    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+                    with open(target_path, 'wb') as f:
+                        f.write(zf.read(member))
+        
         return temp_dir, None
-    except subprocess.TimeoutExpired:
-        return None, "Clone timed out - repository may be too large"
-    except subprocess.CalledProcessError as e:
-        return None, f"Clone failed: {e.stderr}"
+        
+    except requests.Timeout:
+        return None, "Download timed out - repository may be too large"
     except Exception as e:
         return None, str(e)
+
+def clone_repo(repo_url):
+    """Download a GitHub repository (uses API, no git required)."""
+    return download_repo_via_api(repo_url)
 
 def get_file_content(filepath, max_size=500000):
     """Read file content with size limit."""
