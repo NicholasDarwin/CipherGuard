@@ -1,14 +1,18 @@
-from flask import Flask, jsonify
+from http.server import BaseHTTPRequestHandler
+import json
 
-app = Flask(__name__)
-
-@app.route('/')
-def index():
-    return '<html><body><h1>CipherGuard Works!</h1></body></html>'
-
-@app.route('/api/health')
-def health():
-    return jsonify({'status': 'ok'})
-
-def handler(environ, start_response):
-    return app(environ, start_response)
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        html = '''<!DOCTYPE html>
+<html>
+<head><title>CipherGuard</title></head>
+<body style="background:#0f1419;color:#fff;font-family:sans-serif;text-align:center;padding:50px;">
+<h1 style="color:#00d4ff;">CipherGuard Works!</h1>
+<p>Vercel Python is running.</p>
+</body>
+</html>'''
+        self.wfile.write(html.encode())
+        return
