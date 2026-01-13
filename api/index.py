@@ -657,23 +657,71 @@ def health():
         'version': '2.0'
     })
 
+@app.route('/api/debug')
+def debug():
+    """Debug endpoint to check file paths on Vercel."""
+    import glob
+    paths = {
+        'BASE_DIR': BASE_DIR,
+        'cwd': os.getcwd(),
+        '__file__': __file__,
+        'dirname_file': os.path.dirname(__file__),
+    }
+    
+    # Check what files exist
+    try:
+        paths['vuln_ui_exists'] = os.path.exists(os.path.join(BASE_DIR, 'vulnerability_ui'))
+        paths['static_exists'] = os.path.exists(os.path.join(BASE_DIR, 'vulnerability_ui', 'static'))
+        paths['css_exists'] = os.path.exists(os.path.join(BASE_DIR, 'vulnerability_ui', 'static', 'css', 'style.css'))
+    except:
+        pass
+    
+    # List top-level dirs
+    try:
+        paths['base_dir_contents'] = os.listdir(BASE_DIR)[:20]
+    except:
+        paths['base_dir_contents'] = 'error listing'
+    
+    try:
+        paths['cwd_contents'] = os.listdir(os.getcwd())[:20]
+    except:
+        paths['cwd_contents'] = 'error listing'
+    
+    return jsonify(paths)
+
 @app.route('/static/css/style.css')
 def serve_css():
-    css_path = os.path.join(BASE_DIR, 'vulnerability_ui', 'static', 'css', 'style.css')
-    try:
-        with open(css_path, 'r') as f:
-            return Response(f.read(), mimetype='text/css')
-    except:
-        return Response('/* CSS not found */', mimetype='text/css')
+    # Try multiple paths for Vercel compatibility
+    paths_to_try = [
+        os.path.join(BASE_DIR, 'vulnerability_ui', 'static', 'css', 'style.css'),
+        os.path.join(os.path.dirname(__file__), '..', 'vulnerability_ui', 'static', 'css', 'style.css'),
+        '/var/task/vulnerability_ui/static/css/style.css',
+        '/vercel/path0/vulnerability_ui/static/css/style.css'
+    ]
+    for css_path in paths_to_try:
+        try:
+            with open(css_path, 'r') as f:
+                return Response(f.read(), mimetype='text/css')
+        except:
+            continue
+    return Response('/* CSS not found */', mimetype='text/css')
 
 @app.route('/static/js/main.js')
 def serve_js():
-    js_path = os.path.join(BASE_DIR, 'vulnerability_ui', 'static', 'js', 'main.js')
-    try:
-        with open(js_path, 'r') as f:
-            return Response(f.read(), mimetype='application/javascript')
-    except:
-        return Response('// JS not found', mimetype='application/javascript')
+    # Try multiple paths for Vercel compatibility
+    paths_to_try = [
+        os.path.join(BASE_DIR, 'vulnerability_ui', 'static', 'js', 'main.js'),
+        os.path.join(os.path.dirname(__file__), '..', 'vulnerability_ui', 'static', 'js', 'main.js'),
+        '/var/task/vulnerability_ui/static/js/main.js',
+        '/vercel/path0/vulnerability_ui/static/js/main.js'
+    ]
+    for js_path in paths_to_try:
+        try:
+            with open(js_path, 'r') as f:
+                return Response(f.read(), mimetype='application/javascript')
+        except:
+            continue
+    return Response('// JS not found', mimetype='application/javascript')
 
 def handler(environ, start_response):
     return app(environ, start_response)
