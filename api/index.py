@@ -5,24 +5,13 @@ import tempfile
 import shutil
 import re
 import time
-from flask import Flask, request, Response, render_template, jsonify, stream_with_context
+from flask import Flask, request, Response, render_template_string, jsonify, stream_with_context
 
 # Add parent directory to path for imports
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
 
-# Determine template and static folders
-TEMPLATE_FOLDER = os.path.join(BASE_DIR, 'vulnerability_ui', 'templates')
-STATIC_FOLDER = os.path.join(BASE_DIR, 'vulnerability_ui', 'static')
-
-# Fallback for Vercel environment
-if not os.path.exists(TEMPLATE_FOLDER):
-    TEMPLATE_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'vulnerability_ui', 'templates')
-    STATIC_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'vulnerability_ui', 'static')
-
-app = Flask(__name__, 
-    template_folder=TEMPLATE_FOLDER,
-    static_folder=STATIC_FOLDER)
+app = Flask(__name__)
 
 # Load environment variables
 try:
@@ -428,19 +417,93 @@ Format as a clear, professional security report."""
     except Exception as e:
         return f"Overall assessment unavailable: {str(e)}"
 
+# Inline HTML template for Vercel compatibility
+INDEX_HTML = '''<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CipherGuard - AI Security Scanner</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="app-container">
+    <main class="main-content">
+      <div class="hero-section">
+        <div class="shield-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 6c1.4 0 2.8 1.1 2.8 2.5V11c.6.2 1.2.8 1.2 1.5v3c0 .8-.7 1.5-1.5 1.5h-5c-.8 0-1.5-.7-1.5-1.5v-3c0-.7.5-1.3 1.2-1.5V9.5C9.2 8.1 10.6 7 12 7zm0 1.2c-.8 0-1.5.5-1.5 1.3v1.5h3V9.5c0-.8-.7-1.3-1.5-1.3z"/>
+          </svg>
+        </div>
+        <h1 class="app-title">CipherGuard</h1>
+        <div class="gemini-badge" id="geminiBadge">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>Connecting to Gemini AI...</span>
+        </div>
+        <p class="app-subtitle">Intelligent security analysis for folders and GitHub repositories</p>
+      </div>
+      <div class="scan-card">
+        <form id="scanForm" class="scan-form">
+          <div class="input-group">
+            <label for="repo"><i class="fas fa-crosshairs"></i> Target Path or GitHub URL</label>
+            <input type="text" id="repo" name="repo" placeholder="https://github.com/username/repo" required>
+          </div>
+          <div class="input-group">
+            <label for="severity"><i class="fas fa-filter"></i> Min Severity:</label>
+            <div class="select-wrapper">
+              <select id="severity" name="severity">
+                <option value="quick">Low+ (Quick Scan)</option>
+                <option value="standard">Medium+ (Standard)</option>
+                <option value="high" selected>High+ (Deep Scan + AI)</option>
+              </select>
+              <i class="fas fa-chevron-down select-arrow"></i>
+            </div>
+          </div>
+          <button type="button" id="scanBtn" class="scan-button">
+            <i class="fas fa-robot"></i><span>Start AI Scan</span>
+          </button>
+        </form>
+      </div>
+      <section id="resultsSection" class="results-section" style="display: none;">
+        <div id="loadingState" class="loading-state">
+          <div class="loading-spinner"><div class="spinner-ring"></div><i class="fas fa-shield-halved spinner-icon"></i></div>
+          <h2 id="loadingTitle">Initializing scan...</h2>
+          <p id="loadingSub">Preparing security analysis</p>
+          <div id="progressContainer" class="progress-container"></div>
+          <div id="fileList" class="file-list"></div>
+        </div>
+        <div id="completedResults" class="completed-results" style="display: none;">
+          <div id="statsGrid" class="stats-grid"></div>
+          <div class="action-buttons">
+            <button class="action-btn" onclick="copyResults()"><i class="fas fa-copy"></i> Copy Results</button>
+            <button class="action-btn" id="toggleRawJson"><i class="fas fa-code"></i> View Raw JSON</button>
+            <button class="action-btn primary" onclick="resetScan()"><i class="fas fa-plus"></i> New Scan</button>
+          </div>
+          <div class="findings-section">
+            <h3 class="findings-title"><i class="fas fa-list-check"></i> Detailed Findings</h3>
+            <div id="findingsContainer" class="findings-container"></div>
+            <div id="noFindings" class="no-findings" style="display: none;">
+              <i class="fas fa-check-circle"></i><h3>All Clear!</h3><p>No security vulnerabilities detected.</p>
+            </div>
+          </div>
+          <div id="aiSummarySection" class="ai-summary-section" style="display: none;">
+            <h3 class="ai-summary-title"><i class="fas fa-robot"></i> AI Security Analysis</h3>
+            <div id="aiSummaryContent" class="ai-summary-content"></div>
+          </div>
+          <div id="rawJsonPanel" class="raw-json-panel" style="display: none;"><pre id="rawJson"></pre></div>
+        </div>
+      </section>
+    </main>
+    <footer class="app-footer"><p>CipherGuard v2.0 - AI-Powered Security Scanner</p></footer>
+  </div>
+  <script src="/static/js/main.js"></script>
+</body>
+</html>'''
+
 @app.route('/')
 def index():
-    try:
-        return render_template('index.html')
-    except Exception as e:
-        return jsonify({
-            'error': str(e),
-            'template_folder': app.template_folder,
-            'static_folder': app.static_folder,
-            'base_dir': BASE_DIR,
-            'cwd': os.getcwd(),
-            'exists_templates': os.path.exists(app.template_folder) if app.template_folder else False
-        }), 500
+    return INDEX_HTML
 
 @app.route('/api/test_gemini')
 def test_gemini():
@@ -593,6 +656,24 @@ def health():
         'gemini_configured': bool(GEMINI_API_KEY),
         'version': '2.0'
     })
+
+@app.route('/static/css/style.css')
+def serve_css():
+    css_path = os.path.join(BASE_DIR, 'vulnerability_ui', 'static', 'css', 'style.css')
+    try:
+        with open(css_path, 'r') as f:
+            return Response(f.read(), mimetype='text/css')
+    except:
+        return Response('/* CSS not found */', mimetype='text/css')
+
+@app.route('/static/js/main.js')
+def serve_js():
+    js_path = os.path.join(BASE_DIR, 'vulnerability_ui', 'static', 'js', 'main.js')
+    try:
+        with open(js_path, 'r') as f:
+            return Response(f.read(), mimetype='application/javascript')
+    except:
+        return Response('// JS not found', mimetype='application/javascript')
 
 def handler(environ, start_response):
     return app(environ, start_response)
