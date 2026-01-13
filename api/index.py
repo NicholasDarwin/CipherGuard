@@ -5,7 +5,16 @@ import tempfile
 import shutil
 import re
 import time
-from flask import Flask, request, Response, render_template_string, jsonify, stream_with_context
+
+# Try to import Flask - if this fails, the function can't work
+try:
+    from flask import Flask, request, Response, render_template_string, jsonify, stream_with_context
+except ImportError as e:
+    # Create a minimal WSGI app that returns the error
+    def handler(environ, start_response):
+        start_response('500 Internal Server Error', [('Content-Type', 'text/plain')])
+        return [f'Flask import failed: {str(e)}'.encode()]
+    raise
 
 # Add parent directory to path for imports
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
