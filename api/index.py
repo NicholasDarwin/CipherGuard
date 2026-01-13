@@ -11,15 +11,27 @@ from flask import Flask, request, Response, render_template, jsonify, stream_wit
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
 
+# Determine template and static folders
+TEMPLATE_FOLDER = os.path.join(BASE_DIR, 'vulnerability_ui', 'templates')
+STATIC_FOLDER = os.path.join(BASE_DIR, 'vulnerability_ui', 'static')
+
+# Fallback for Vercel environment
+if not os.path.exists(TEMPLATE_FOLDER):
+    TEMPLATE_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'vulnerability_ui', 'templates')
+    STATIC_FOLDER = os.path.join(os.path.dirname(__file__), '..', 'vulnerability_ui', 'static')
+
 app = Flask(__name__, 
-    template_folder=os.path.join(BASE_DIR, 'vulnerability_ui', 'templates'),
-    static_folder=os.path.join(BASE_DIR, 'vulnerability_ui', 'static'))
+    template_folder=TEMPLATE_FOLDER,
+    static_folder=STATIC_FOLDER)
 
 # Load environment variables
-from dotenv import load_dotenv
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyDsOyz8PBaK5C4xQLBKwIs108VG5N7_dug')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 
 # Comprehensive secret patterns with severity levels
 SECRET_PATTERNS = {
@@ -418,7 +430,17 @@ Format as a clear, professional security report."""
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'template_folder': app.template_folder,
+            'static_folder': app.static_folder,
+            'base_dir': BASE_DIR,
+            'cwd': os.getcwd(),
+            'exists_templates': os.path.exists(app.template_folder) if app.template_folder else False
+        }), 500
 
 @app.route('/api/test_gemini')
 def test_gemini():
