@@ -433,6 +433,7 @@ INDEX_HTML = '''<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CipherGuard - AI Security Scanner</title>
+  <link rel="icon" type="image/svg+xml" href="/static/cipherguard.svg">
   <link rel="stylesheet" href="/static/css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -732,6 +733,20 @@ def serve_js():
             continue
     return Response('// JS not found', mimetype='application/javascript')
 
-
-
+@app.route('/static/cipherguard.svg')
+def serve_favicon():
+    # Try multiple paths for Vercel compatibility
+    paths_to_try = [
+        os.path.join(BASE_DIR, 'vulnerability_ui', 'static', 'cipherguard.svg'),
+        os.path.join(os.path.dirname(__file__), '..', 'vulnerability_ui', 'static', 'cipherguard.svg'),
+        '/var/task/vulnerability_ui/static/cipherguard.svg',
+        '/vercel/path0/vulnerability_ui/static/cipherguard.svg'
+    ]
+    for svg_path in paths_to_try:
+        try:
+            with open(svg_path, 'r') as f:
+                return Response(f.read(), mimetype='image/svg+xml')
+        except:
+            continue
+    return Response('', mimetype='image/svg+xml')
 
