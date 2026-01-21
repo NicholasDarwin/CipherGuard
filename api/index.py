@@ -442,9 +442,7 @@ INDEX_HTML = '''<!DOCTYPE html>
     <main class="main-content">
       <div class="hero-section">
         <div class="shield-icon">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 6c1.4 0 2.8 1.1 2.8 2.5V11c.6.2 1.2.8 1.2 1.5v3c0 .8-.7 1.5-1.5 1.5h-5c-.8 0-1.5-.7-1.5-1.5v-3c0-.7.5-1.3 1.2-1.5V9.5C9.2 8.1 10.6 7 12 7zm0 1.2c-.8 0-1.5.5-1.5 1.3v1.5h3V9.5c0-.8-.7-1.3-1.5-1.3z"/>
-          </svg>
+          <img src="/static/cipherguard.svg" alt="CipherGuard Logo" width="80" height="80">
         </div>
         <h1 class="app-title">CipherGuard</h1>
         <div class="gemini-badge" id="geminiBadge">
