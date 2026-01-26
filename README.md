@@ -1,4 +1,4 @@
-# 🛡️ CipherGuard - AI-Powered GitHub Vulnerability Scanner
+# CipherGuard - AI-Powered GitHub Vulnerability Scanner
 
 CipherGuard is a modern web application that scans GitHub repositories for security vulnerabilities, exposed secrets, API keys, passwords, tokens, and other sensitive data. It features optional AI-powered analysis using Google Gemini for deeper security insights.
 
@@ -8,12 +8,10 @@ CipherGuard is a modern web application that scans GitHub repositories for secur
 
 ## ✨ Features
 
-- 🔍 **Secret Detection**: Scans for passwords, API keys, tokens, private keys, and more
-- 🤖 **AI Analysis**: Optional deep analysis powered by Google Gemini 2.0
-- 🎨 **Modern Dark UI**: Beautiful, responsive interface with real-time updates
-- 📊 **Severity Rankings**: Categorizes findings by criticality (Critical/High/Medium/Low)
-- 🌐 **Real-time Streaming**: Live updates as files are scanned
-- ☁️ **Vercel Ready**: Deployable as a serverless application
+- **Secret Detection**: Scans for passwords, API keys, tokens, private keys, and more
+- **Severity Rankings**: Categorizes findings by criticality (Critical/High/Medium/Low)
+- **Real-time Streaming**: Live updates as files are scanned
+- **Vercel Ready**: Deployable as a serverless application
 
 ## 🚀 Quick Start
 
