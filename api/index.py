@@ -509,6 +509,8 @@ INDEX_HTML = '''<!DOCTYPE html>
     <footer class="app-footer"><p>CipherGuard v2.0 - AI-Powered Security Scanner</p></footer>
   </div>
   <script src="/static/js/main.js"></script>
+  <!-- Vercel Web Analytics -->
+  <script defer src="https://vercel.com/analytics/script.js"></script>
 </body>
 </html>'''
 
