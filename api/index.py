@@ -185,13 +185,16 @@ def parse_github_url(repo_url):
     """Parse GitHub URL to extract owner and repo name."""
     import re
     patterns = [
-        r'github\.com[/:]([^/]+)/([^/.]+?)(?:\.git)?$',
-        r'github\.com[/:]([^/]+)/([^/.]+?)/?$'
+        r'github\.com[/:]([^/]+)/([^/]+?)(?:\.git)?/?$',  # Matches both with and without .git
+        r'github\.com[/:]([^/]+)/([^/]+)/?$'  # Fallback: match everything up to end or slash
     ]
     for pattern in patterns:
         match = re.search(pattern, repo_url)
         if match:
-            return match.group(1), match.group(2)
+            owner, repo = match.group(1), match.group(2)
+            # Remove .git suffix if present
+            repo = repo.replace('.git', '').rstrip('/')
+            return owner, repo
     return None, None
 
 def download_repo_via_api(repo_url):
