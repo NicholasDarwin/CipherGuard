@@ -1,0 +1,50 @@
+# This template is NOT applied directly.
+# The API server creates Jobs programmatically using the @kubernetes/client-node
+# library, filling in REPO_URL, SCAN_ID, and CALLBACK_URL at runtime.
+#
+# Shown here for documentation / manual testing purposes.
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: scan-PLACEHOLDER
+  labels:
+    app: cipherguard-scanner
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: cipherguard-scanner
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: scanner
+          image: cipherguard/scanner-worker:latest
+          env:
+            - name: REPO_URL
+              value: "https://github.com/owner/repo"
+            - name: SCAN_ID
+              value: "PLACEHOLDER"
+            - name: CALLBACK_URL
+              value: "http://cipherguard-api:4000/scan-results"
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cipherguard-secrets
+                  key: GEMINI_API_KEY
+                  optional: true
+            - name: SNYK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cipherguard-secrets
+                  key: SNYK_TOKEN
+                  optional: true
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi

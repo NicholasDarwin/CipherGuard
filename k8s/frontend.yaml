@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cipherguard-frontend
+  labels:
+    app: cipherguard-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cipherguard-frontend
+  template:
+    metadata:
+      labels:
+        app: cipherguard-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: cipherguard/frontend:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cipherguard-frontend
+spec:
+  selector:
+    app: cipherguard-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+  type: LoadBalancer

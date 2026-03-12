@@ -1,0 +1,14 @@
+# ---- CipherGuard Scanner Worker ----
+FROM node:20-alpine
+
+# git is required for cloning repos
+RUN apk add --no-cache git
+
+WORKDIR /app
+
+COPY backend/package.json backend/package-lock.json* ./
+RUN npm ci --omit=dev
+
+COPY backend/scanner-worker.js ./
+
+CMD ["node", "scanner-worker.js"]

@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cipherguard-api
+  labels:
+    app: cipherguard-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cipherguard-api
+  template:
+    metadata:
+      labels:
+        app: cipherguard-api
+    spec:
+      serviceAccountName: cipherguard-api
+      containers:
+        - name: api
+          image: cipherguard/api:latest
+          ports:
+            - containerPort: 4000
+          env:
+            - name: PORT
+              value: "4000"
+            - name: WORKER_IMAGE
+              value: cipherguard/scanner-worker:latest
+            - name: API_CALLBACK_URL
+              value: http://cipherguard-api:4000
+            - name: JOB_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 4000
+            initialDelaySeconds: 10
+            periodSeconds: 30
