@@ -1,153 +1,161 @@
-# CipherGuard - AI-Powered GitHub Vulnerability Scanner
+# CipherGuard – AI-Powered GitHub Security Scanner
 
-CipherGuard is a modern web application that scans GitHub repositories for security vulnerabilities, exposed secrets, API keys, passwords, tokens, and other sensitive data. It features optional AI-powered analysis using Google Gemini for deeper security insights.
+CipherGuard scans GitHub repositories for security vulnerabilities, exposed secrets, and dependency issues using AI-powered analysis. Multiple repos can be scanned concurrently via Kubernetes Jobs.
 
 ![CipherGuard](https://img.shields.io/badge/CipherGuard-Security%20Scanner-blue?style=for-the-badge)
-![Python](https://img.shields.io/badge/Python-3.8+-green?style=for-the-badge&logo=python)
-![Flask](https://img.shields.io/badge/Flask-2.0+-red?style=for-the-badge&logo=flask)
+![Node.js](https://img.shields.io/badge/Node.js-20+-green?style=for-the-badge&logo=node.js)
+![React](https://img.shields.io/badge/React-19-blue?style=for-the-badge&logo=react)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-Jobs-326CE5?style=for-the-badge&logo=kubernetes)
+
+## Architecture
+
+```
+┌─────────────────────┐       ┌────────────────────────┐
+│  React Frontend     │──────▶│  Express API Server    │
+│  (nginx container)  │       │  (Node.js container)   │
+└─────────────────────┘       └────────┬───────────────┘
+                                       │ creates K8s Jobs
+                              ┌────────▼───────────────┐
+                              │  Scanner Worker Pods    │
+                              │  (one per scan, runs    │
+                              │   in parallel)          │
+                              └─────────────────────────┘
+```
 
 ## ✨ Features
 
-- **Secret Detection**: Scans for passwords, API keys, tokens, private keys, and more
-- **Severity Rankings**: Categorizes findings by criticality (Critical/High/Medium/Low)
-- **Real-time Streaming**: Live updates as files are scanned
-- **Vercel Ready**: Deployable as a serverless application
+- **Concurrent Scanning**: Submit multiple repos at once — each runs as a separate Kubernetes Job
+- **Secret Detection**: Finds passwords, API keys, tokens, private keys, AWS credentials, JWTs, and more
+- **Static Analysis**: ESLint code quality analysis on JS/TS files
+- **Dependency Scanning**: Snyk vulnerability detection for project dependencies
+- **AI Threat Analysis**: Gemini AI provides per-finding risk assessment and an overall security report
+- **Scan Dashboard**: React UI tracks all scans in real time with status polling
+- **Detailed Reports**: Severity-grouped findings with AI remediation guidance
 
 ## 🚀 Quick Start
 
-### Local Development
+### Local Development (no Kubernetes required)
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/CipherGuard.git
-   cd CipherGuard
-   ```
+```bash
+# API server
+cd backend
+npm install
+cp .env.example .env   # add your GEMINI_API_KEY and SNYK_TOKEN
+node server.js          # runs on :4000
 
-2. **Create a virtual environment**
-   ```bash
-   python -m venv venv
-   # Windows
-   venv\Scripts\activate
-   # macOS/Linux
-   source venv/bin/activate
-   ```
+# React frontend (separate terminal)
+cd frontend
+npm install
+npm start               # runs on :3000, proxies API to :4000
+```
 
-3. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+Without a Kubernetes cluster, scans stay in `queued` status. Run the worker manually:
 
-4. **Set up environment variables**
-   ```bash
-   # Create .env file with your Gemini API key
-   echo "GEMINI_API_KEY=your_api_key_here" > .env
-   ```
+```bash
+REPO_URL=https://github.com/owner/repo \
+SCAN_ID=<uuid-from-POST-response> \
+CALLBACK_URL=http://localhost:4000/scan-results \
+node backend/scanner-worker.js
+```
 
-5. **Run the application**
-   ```bash
-   python app.py
-   ```
+### Kubernetes Deployment
 
-6. **Open your browser**
-   Navigate to `http://localhost:5000`
+```bash
+# Build images
+docker build -f Dockerfile.api    -t cipherguard/api:latest .
+docker build -f Dockerfile.worker -t cipherguard/scanner-worker:latest .
+docker build -f Dockerfile.frontend -t cipherguard/frontend:latest .
+
+# Create secrets
+kubectl create secret generic cipherguard-secrets \
+  --from-literal=GEMINI_API_KEY=<key> \
+  --from-literal=SNYK_TOKEN=<token>
+
+# Deploy
+kubectl apply -f k8s/rbac.yaml
+kubectl apply -f k8s/api-deployment.yaml
+kubectl apply -f k8s/api-service.yaml
+kubectl apply -f k8s/frontend.yaml
+```
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the full guide.
+
+## 🔌 API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/scan` | Start a new scan (creates a K8s Job) |
+| GET | `/scans` | List all scans with current status |
+| GET | `/scan/:id` | Detailed results for one scan |
+| POST | `/scan-results` | Worker callback to submit results |
+| GET | `/health` | Health check |
 
 ## 📁 Project Structure
 
 ```
-CipherGuard/
-├── api/
-│   └── index.py          # Vercel serverless entry point & main Flask app
-├── vulnerability_ui/
-│   ├── static/
-│   │   ├── css/
-│   │   │   └── style.css # Dark theme styles
-│   │   └── js/
-│   │       └── main.js   # Frontend JavaScript
-│   ├── templates/
-│   │   └── index.html    # Main HTML template
-│   └── __init__.py
-├── app.py                 # Local Flask development server
-├── requirements.txt       # Python dependencies
-├── vercel.json           # Vercel deployment configuration
-├── .env                  # Environment variables (not in git)
-└── README.md
+backend/
+  server.js              # Express API + Kubernetes Job creation
+  scanner-worker.js      # Standalone scan worker (runs in K8s Jobs)
+  package.json
+  .env.example
+frontend/
+  src/
+    App.js               # React router setup
+    App.css              # Dashboard styles
+    components/
+      ScanDashboard.js   # Main dashboard with polling
+      ScanForm.js        # Multi-repo submission form
+      ScanCard.js        # Individual scan status card
+      ScanReport.js      # Detailed report page
+  public/index.html
+k8s/
+  api-deployment.yaml    # API Deployment (2 replicas)
+  api-service.yaml       # ClusterIP Service
+  frontend.yaml          # Frontend Deployment + LoadBalancer
+  rbac.yaml              # ServiceAccount + Role for Job creation
+  scan-job-template.yaml # Reference Job template
+  secrets.yaml           # Secret placeholder
+Dockerfile.api           # API server image
+Dockerfile.worker        # Scanner worker image
+Dockerfile.frontend      # React build → nginx
+nginx.conf               # Frontend reverse proxy
 ```
 
 ## 🔐 Secret Patterns Detected
 
-| Type | Description |
-|------|-------------|
-| `password` | Password assignments in code |
-| `api_key` | API keys and credentials |
-| `token` | Authentication tokens |
-| `secret` | Client secrets |
-| `private_key` | RSA/SSH private keys |
-| `aws_secret` | AWS secret access keys |
-| `bearer` | Bearer tokens |
-| `authorization` | Authorization headers |
+| Category | Examples |
+|----------|----------|
+| **Critical** | Private keys, AWS credentials, GitHub tokens, Stripe keys |
+| **High** | API keys, auth tokens, client secrets, JWTs, Google API keys |
+| **Medium** | Passwords, database URLs, connection strings |
+| **Low** | Email addresses, hardcoded IPs |
 
-## 🎯 Scan Modes
+## 🛡️ Vulnerability Patterns Detected
 
-1. **Quick Scan**: Fast pattern matching for common secrets
-2. **Standard Scan**: Comprehensive secret detection
-3. **Deep Scan + AI Analysis**: Full scan with Gemini AI security assessment
+SQL injection, XSS, eval/exec usage, shell injection, insecure random, debug mode, CORS wildcards, HTTP without TLS
 
-## ☁️ Vercel Deployment
-
-1. **Install Vercel CLI**
-   ```bash
-   npm i -g vercel
-   ```
-
-2. **Add your API key as a secret**
-   ```bash
-   vercel secrets add gemini-api-key "your_api_key_here"
-   ```
-
-3. **Deploy**
-   ```bash
-   vercel --prod
-   ```
-
-## 🔧 Configuration
-
-### Environment Variables
+## 🔧 Environment Variables
 
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `GEMINI_API_KEY` | Google Gemini API key for AI analysis | Optional |
-
-### Getting a Gemini API Key
-
-1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Create a new API key
-3. Add it to your `.env` file
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+| `SNYK_TOKEN` | Snyk token for dependency scanning | Optional |
+| `PORT` | API server port (default: 4000) | No |
+| `WORKER_IMAGE` | Docker image for scanner worker | No |
+| `API_CALLBACK_URL` | URL workers POST results to | No |
+| `JOB_NAMESPACE` | Kubernetes namespace for Jobs | No |
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT — see [LICENSE](LICENSE).
 
 ## ⚠️ Disclaimer
 
-This tool is intended for security research and educational purposes. Always ensure you have permission to scan a repository before using this tool. The developers are not responsible for any misuse of this software.
-
-## 🙏 Acknowledgments
-
-- [Google Gemini](https://deepmind.google/technologies/gemini/) for AI capabilities
-- [Flask](https://flask.palletsprojects.com/) for the web framework
-- [Font Awesome](https://fontawesome.com/) for icons
+This tool is for security research and education. Ensure you have permission to scan a repository before use.
 
 ---
 
 Made with ❤️ by the CipherGuard Team
- 
- 
- 
- 
  
  
  

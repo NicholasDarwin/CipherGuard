@@ -136,6 +136,52 @@ body {
 }
 .scan-form-row button:disabled { opacity: .55; cursor: not-allowed; }
 .scan-form-row button:hover:not(:disabled) { opacity: .9; }
+
+/* Multi-URL form */
+.scan-form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.scan-form-col textarea {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 80px;
+  transition: border 0.2s;
+}
+.scan-form-col textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(99,102,241,.12);
+}
+.scan-form-col button {
+  padding: 0.85rem 1.5rem;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s;
+}
+.scan-form-col button:disabled { opacity: .55; cursor: not-allowed; }
+.scan-form-col button:hover:not(:disabled) { opacity: .9; }
+.form-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.4rem;
+}
 .form-error {
   color: var(--accent);
   font-size: 0.8rem;
