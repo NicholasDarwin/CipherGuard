@@ -122,11 +122,52 @@ SECRET_PATTERNS = {
         'description': 'Email address (potential PII)'
     },
     'ip_address': {
-        'pattern': r'\b(?:\d{1,3}\.){3}\d{1,3}\b',
+        # Real IPv4 only: every octet 0-255, and not embedded in a longer
+        # number or decimal sequence (e.g. SVG path data "12.5.3.1.7").
+        'pattern': r'(?<![\d.])(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)'
+                   r'(?:\.(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}(?![\d.])',
         'severity': 'low',
         'description': 'IP Address hardcoded'
     },
 }
+
+# Rules whose matches should be discarded when they fall inside inline SVG
+# geometry. Files with an .svg extension are skipped by the walker already,
+# but HTML templates routinely embed <svg><path d="..."/></svg>, and the
+# coordinate runs in those attributes look like dotted quads.
+SVG_SENSITIVE_RULES = {'ip_address'}
+
+SVG_REGION_PATTERNS = (
+    r'<svg\b[^>]*>.*?</svg>',
+    r'\b(?:d|points|viewBox|transform|preserveAspectRatio)\s*=\s*"[^"]*"',
+    r"\b(?:d|points|viewBox|transform|preserveAspectRatio)\s*=\s*'[^']*'",
+)
+
+
+def _svg_spans(content):
+    """Character ranges of inline SVG markup and geometry attributes."""
+    spans = []
+    for pattern in SVG_REGION_PATTERNS:
+        for m in re.finditer(pattern, content, re.DOTALL | re.IGNORECASE):
+            spans.append((m.start(), m.end()))
+    return spans
+
+
+def _in_spans(pos, spans):
+    return any(start <= pos < end for start, end in spans)
+
+
+def dedupe_findings(findings):
+    """Drop repeats of the same rule + file + line + matched value."""
+    seen = set()
+    unique = []
+    for f in findings:
+        key = (f.get('keyword'), f.get('file'), f.get('line'), f.get('match'))
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(f)
+    return unique
 
 # Vulnerability patterns (code issues)
 VULNERABILITY_PATTERNS = {
@@ -176,7 +217,13 @@ VULNERABILITY_PATTERNS = {
         'description': 'CORS wildcard enabled'
     },
     'http_without_tls': {
-        'pattern': r'http://(?!localhost|127\.0\.0\.1)',
+        # XML/SVG namespace identifiers are URIs, not network calls - they are
+        # never fetched over the wire, so http:// there is not a TLS problem.
+        'pattern': r'http://(?!localhost|127\.0\.0\.1|0\.0\.0\.0|'
+                   r'www\.w3\.org|www\.sitemaps\.org|schemas\.|purl\.org|'
+                   r'ns\.adobe\.com|xml\.apache\.org|java\.sun\.com|'
+                   r'docbook\.org|www\.openarchives\.org|'
+                   r'www\.inkscape\.org|sodipodi\.sourceforge\.net)',
         'severity': 'low',
         'description': 'HTTP without TLS'
     },
@@ -270,11 +317,18 @@ def get_file_content(filepath, max_size=500000):
 def scan_file_for_secrets(filepath, content):
     """Scan a single file for secret patterns."""
     findings = []
-    
+    svg_spans = None
+
     for keyword, config in SECRET_PATTERNS.items():
         try:
+            if keyword in SVG_SENSITIVE_RULES and svg_spans is None:
+                svg_spans = _svg_spans(content)
+
             matches = re.finditer(config['pattern'], content)
             for match in matches:
+                if keyword in SVG_SENSITIVE_RULES and _in_spans(match.start(), svg_spans):
+                    continue
+
                 line_num = content[:match.start()].count('\n') + 1
                 lines = content.split('\n')
                 line_content = lines[line_num - 1] if line_num <= len(lines) else ''
@@ -359,7 +413,13 @@ def scan_repository_generator(repo_path):
             secret_findings = scan_file_for_secrets(filepath, content)
             vuln_findings = scan_file_for_vulnerabilities(filepath, content)
             all_findings = secret_findings + vuln_findings
-            
+
+            # Stamp the path before deduping so the key matches what the
+            # client eventually renders, then collapse exact repeats.
+            for finding in all_findings:
+                finding['file'] = relative_path
+            all_findings = dedupe_findings(all_findings)
+
             yield {
                 'type': 'file_scanned',
                 'file': relative_path,
@@ -369,64 +429,115 @@ def scan_repository_generator(repo_path):
                 'findings': all_findings
             }
 
+# Phrases that indicate the model declined rather than answered. Gemini
+# refuses when a prompt reads as "assess the security of this repository",
+# so the prompts below frame the task as explaining static-analysis output
+# on the user's own code instead.
+REFUSAL_MARKERS = (
+    'i cannot fulfill',
+    'i cannot provide',
+    'i can not fulfill',
+    "i can't fulfill",
+    "i can't provide",
+    'i cannot assist',
+    "i can't assist",
+    'i am unable to',
+    "i'm unable to",
+    'i cannot conduct',
+    'i cannot perform',
+    'as an ai language model, i cannot',
+)
+
+FINDING_FALLBACK = (
+    'The AI assistant could not comment on this finding. The scanner rule '
+    'that fired is described above - review the matched value and line '
+    'yourself, and treat it as a real issue until you have confirmed '
+    'otherwise.'
+)
+
+SUMMARY_FALLBACK = (
+    'The AI assistant could not generate a written summary for this scan. '
+    'The findings below are unaffected - they come from the pattern scanner, '
+    'not from the AI. Work through them starting with the highest severity '
+    'section.'
+)
+
+
+def is_refusal(text):
+    """True when the model declined instead of answering."""
+    if not text:
+        return True
+    lowered = text.strip().lower()
+    return any(marker in lowered for marker in REFUSAL_MARKERS)
+
+
 def analyze_finding_with_gemini(finding, file_path, client):
-    """Analyze a single finding with Gemini AI."""
+    """Explain a single scanner finding using Gemini."""
     try:
-        prompt = f"""Analyze this security finding and provide a brief assessment:
+        prompt = f"""You are helping a developer read the output of a static
+analysis tool that ran over their own source code. Below is one result the
+scanner flagged. Explain it to them.
 
+Rule ID: {finding['keyword']}
+Rule description: {finding['description']}
 File: {file_path}
-Type: {finding['type']} - {finding['keyword']}
-Severity: {finding['severity']}
-Description: {finding['description']}
-Line {finding['line']}: {finding['context']}
-Match: {finding['match']}
+Line: {finding['line']}
+Matched value: {finding['match']}
+Line content: {finding['context']}
 
-Provide in 2-3 sentences:
-1. Why this is a security risk
-2. How to fix it
-3. Potential impact if exploited
+In 2-3 sentences, cover:
+1. What this rule looks for and why that pattern matters
+2. Whether this specific match looks like a false positive
+3. The concrete change that would resolve it
 
-Be concise and specific."""
+Write plainly and directly to the developer. Do not evaluate the repository
+as a whole and do not speculate about anything beyond this one line."""
 
         response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-        return response.text
+        text = response.text
+        return FINDING_FALLBACK if is_refusal(text) else text
     except Exception as e:
         return f"Analysis unavailable: {str(e)}"
 
 def get_overall_assessment(findings, repo_url, client):
-    """Get overall security assessment from Gemini."""
+    """Explain the scanner's output as a whole using Gemini."""
     try:
-        severity_counts = {'critical': 0, 'high': 0, 'medium': 0, 'low': 0}
+        # Send only the scanner output - rule, file, line, snippet - with no
+        # framing that asks the model to judge a repository.
+        by_rule = {}
         for f in findings:
-            severity_counts[f.get('severity', 'low')] += 1
-        
-        critical_findings = [f for f in findings if f.get('severity') == 'critical'][:5]
-        high_findings = [f for f in findings if f.get('severity') == 'high'][:5]
-        sample = critical_findings + high_findings
-        
-        prompt = f"""Provide a comprehensive security assessment for the GitHub repository: {repo_url}
+            by_rule.setdefault(f.get('keyword', 'unknown'), []).append(f)
 
-Summary of Findings:
-- Critical: {severity_counts['critical']}
-- High: {severity_counts['high']}
-- Medium: {severity_counts['medium']}
-- Low: {severity_counts['low']}
-- Total: {len(findings)}
+        rule_lines = []
+        for rule, items in sorted(by_rule.items(), key=lambda kv: -len(kv[1])):
+            sample = items[0]
+            rule_lines.append(
+                f"- {rule} ({sample.get('severity', 'low')}), {len(items)} "
+                f"occurrence(s); example: {sample.get('file')} line "
+                f"{sample.get('line')}: {sample.get('context', '')[:120]}"
+            )
 
-Sample of Critical/High Findings:
-{json.dumps(sample[:10], indent=2)}
+        prompt = f"""A developer ran a pattern-based static analysis tool over
+their own source code. Below is the list of rules that fired, with one example
+occurrence each. Help them interpret this output.
 
-Provide:
-1. Overall Security Score (0-100)
-2. Risk Level (Critical/High/Medium/Low)
-3. Top 3 Priority Actions
-4. Security Recommendations
-5. Brief summary of the repository's security posture
+{chr(10).join(rule_lines[:25])}
 
-Format as a clear, professional security report."""
+For each rule listed, write a short entry covering:
+1. What the rule detects and why that pattern is worth knowing about
+2. How likely these particular matches are to be false positives
+3. The concrete change that would resolve it
+
+Then finish with a short "Where to start" paragraph ordering the rules by what
+is worth fixing first.
+
+This is the developer's own code and they are asking for help reading tool
+output. Do not rate or judge the repository, do not assign a security score,
+and do not speculate about code you have not been shown."""
 
         response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
-        return response.text
+        text = response.text
+        return SUMMARY_FALLBACK if is_refusal(text) else text
     except Exception as e:
         return f"Overall assessment unavailable: {str(e)}"
 
@@ -460,6 +571,11 @@ INDEX_HTML = '''<!DOCTYPE html>
           <div class="input-group">
             <label for="repo"><i class="fas fa-crosshairs"></i> Target Path or GitHub URL</label>
             <input type="text" id="repo" name="repo" placeholder="https://github.com/username/repo" required>
+          </div>
+          <div class="sample-repos">
+            <div class="sample-repos-title"><i class="fas fa-flask"></i> Try a sample repo</div>
+            <div id="sampleRepoButtons" class="sample-repo-buttons"></div>
+            <p class="sample-repos-note">No setup needed. Click a sample to see CipherGuard in action.</p>
           </div>
           <div class="input-group">
             <label for="severity"><i class="fas fa-filter"></i> Min Severity:</label>
@@ -589,6 +705,10 @@ def scan_stream():
                     
                     time.sleep(0.02)
             
+            # Second pass in case the same rule/line/value surfaced from more
+            # than one file-scan event.
+            all_findings = dedupe_findings(all_findings)
+
             severity_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
             all_findings.sort(key=lambda x: severity_order.get(x.get('severity', 'low'), 4))
             
