@@ -20,6 +20,7 @@ const REPO_URL = process.env.REPO_URL;
 const SCAN_ID = process.env.SCAN_ID;
 const CALLBACK_URL = process.env.CALLBACK_URL;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
 const SNYK_TOKEN = process.env.SNYK_TOKEN || "";
 
 // ---------------------------------------------------------------------------
@@ -336,9 +337,8 @@ function runSnyk(repoDir) {
 async function analyzeWithGemini(findings, repoUrl) {
   if (!GEMINI_API_KEY || findings.length === 0) return { analyses: [], overallAssessment: null };
 
-  const { GoogleGenerativeAI } = require("@google/generative-ai");
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const { GoogleGenAI } = require("@google/genai");
+  const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
   const priorityFindings = findings
     .filter((f) => f.severity === "critical" || f.severity === "high")
@@ -363,8 +363,8 @@ Provide in 2-3 sentences:
 
 Be concise and specific.`;
 
-      const result = await model.generateContent(prompt);
-      analyses.push({ finding, analysis: result.response.text() });
+      const result = await ai.models.generateContent({ model: GEMINI_MODEL, contents: prompt });
+      analyses.push({ finding, analysis: result.text });
     } catch (err) {
       analyses.push({ finding, analysis: `Analysis unavailable: ${err.message}` });
     }
@@ -390,8 +390,8 @@ ${JSON.stringify(priorityFindings.slice(0, 10), null, 2)}
 
 Provide: 1. Overall Security Score (0-100) 2. Risk Level 3. Top 3 Priority Actions 4. Security Recommendations 5. Brief summary of the repository's security posture.`;
 
-    const result = await model.generateContent(prompt);
-    overallAssessment = result.response.text();
+    const result = await ai.models.generateContent({ model: GEMINI_MODEL, contents: prompt });
+    overallAssessment = result.text;
   } catch (err) {
     overallAssessment = `Assessment unavailable: ${err.message}`;
   }

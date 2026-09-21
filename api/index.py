@@ -30,6 +30,7 @@ except ImportError:
     pass
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-3.5-flash')
 
 # Comprehensive secret patterns with severity levels
 SECRET_PATTERNS = {
@@ -368,7 +369,7 @@ def scan_repository_generator(repo_path):
                 'findings': all_findings
             }
 
-def analyze_finding_with_gemini(finding, file_path, model):
+def analyze_finding_with_gemini(finding, file_path, client):
     """Analyze a single finding with Gemini AI."""
     try:
         prompt = f"""Analyze this security finding and provide a brief assessment:
@@ -387,12 +388,12 @@ Provide in 2-3 sentences:
 
 Be concise and specific."""
 
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
         return response.text
     except Exception as e:
         return f"Analysis unavailable: {str(e)}"
 
-def get_overall_assessment(findings, repo_url, model):
+def get_overall_assessment(findings, repo_url, client):
     """Get overall security assessment from Gemini."""
     try:
         severity_counts = {'critical': 0, 'high': 0, 'medium': 0, 'low': 0}
@@ -424,7 +425,7 @@ Provide:
 
 Format as a clear, professional security report."""
 
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
         return response.text
     except Exception as e:
         return f"Overall assessment unavailable: {str(e)}"
@@ -522,19 +523,23 @@ def index():
 def test_gemini():
     """Test Gemini API connection."""
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-2.0-flash')
-        response = model.generate_content("Say 'Gemini API connected!' in exactly those words.")
+        from google import genai
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents="Say 'Gemini API connected!' in exactly those words."
+        )
         return jsonify({
             'status': 'ok',
             'message': response.text,
+            'model': GEMINI_MODEL,
             'api_key_configured': bool(GEMINI_API_KEY)
         })
     except Exception as e:
         return jsonify({
             'status': 'error',
             'message': str(e),
+            'model': GEMINI_MODEL,
             'api_key_configured': bool(GEMINI_API_KEY)
         })
 
@@ -594,10 +599,9 @@ def scan_stream():
             
             if scan_mode == 'high' and GEMINI_API_KEY:
                 try:
-                    import google.generativeai as genai
-                    genai.configure(api_key=GEMINI_API_KEY)
-                    model = genai.GenerativeModel('gemini-2.0-flash')
-                    
+                    from google import genai
+                    client = genai.Client(api_key=GEMINI_API_KEY)
+
                     yield f"event: status\ndata: {json.dumps({'step': 'AI Analysis Starting', 'message': 'Connecting to Gemini AI...', 'progress': 68})}\n\n"
                     
                     priority_findings = [f for f in all_findings if f.get('severity') in ['critical', 'high']][:15]
@@ -609,7 +613,7 @@ def scan_stream():
                             progress = 70 + int((i / len(priority_findings)) * 15)
                             yield f"event: ai_progress\ndata: {json.dumps({'current': i + 1, 'total': len(priority_findings), 'file': finding['file'], 'finding': finding['keyword'], 'progress': progress})}\n\n"
                             
-                            analysis = analyze_finding_with_gemini(finding, finding['file'], model)
+                            analysis = analyze_finding_with_gemini(finding, finding['file'], client)
                             ai_analyses.append({
                                 'finding': finding,
                                 'analysis': analysis
@@ -620,7 +624,7 @@ def scan_stream():
                     
                     yield f"event: status\ndata: {json.dumps({'step': 'Generating Report', 'message': 'Creating overall security assessment...', 'progress': 88})}\n\n"
                     
-                    overall_assessment = get_overall_assessment(all_findings, repo_url, model)
+                    overall_assessment = get_overall_assessment(all_findings, repo_url, client)
                     
                     yield f"event: overall_assessment\ndata: {json.dumps({'assessment': overall_assessment})}\n\n"
                     

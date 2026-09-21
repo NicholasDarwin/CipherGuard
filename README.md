@@ -139,6 +139,7 @@ SQL injection, XSS, eval/exec usage, shell injection, insecure random, debug mod
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `GEMINI_API_KEY` | Google Gemini API key for AI analysis | Optional |
+| `GEMINI_MODEL` | Gemini model ID (default: `gemini-3.5-flash`) | No |
 | `SNYK_TOKEN` | Snyk token for dependency scanning | Optional |
 | `PORT` | API server port (default: 4000) | No |
 | `WORKER_IMAGE` | Docker image for scanner worker | No |
