@@ -107,8 +107,9 @@ const VULNERABILITY_PATTERNS = {
     severity: "high",
     description: "Potential XSS vulnerability",
   },
+  // Not preceded by a dot: regex.exec() is a method call, not the builtin.
   eval_usage: {
-    pattern: /\beval\s*\(/,
+    pattern: /(?<![.\w])eval\s*\(/,
     severity: "high",
     description: "Dangerous eval() usage",
   },
@@ -137,7 +138,9 @@ const VULNERABILITY_PATTERNS = {
     // XML/SVG namespace identifiers are URIs, not network calls, so http://
     // there is not a TLS problem.
     pattern:
-      /http:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0|www\.w3\.org|www\.sitemaps\.org|schemas\.|purl\.org|ns\.adobe\.com|xml\.apache\.org|java\.sun\.com|docbook\.org|www\.openarchives\.org|www\.inkscape\.org|sodipodi\.sourceforge\.net)/i,
+      // The trailing lookahead requires a dot in the host: single-label names
+      // like http://cipherguard-api:4000 are in-cluster service addresses.
+      /http:\/\/(?!localhost|127\.0\.0\.1|0\.0\.0\.0|www\.w3\.org|www\.sitemaps\.org|schemas\.|purl\.org|ns\.adobe\.com|xml\.apache\.org|java\.sun\.com|docbook\.org|www\.openarchives\.org|www\.inkscape\.org|sodipodi\.sourceforge\.net)(?=[A-Za-z0-9._~-]*\.)/i,
     severity: "low",
     description: "HTTP without TLS",
   },
@@ -211,6 +214,59 @@ function cloneRepo(url, dest) {
   });
 }
 
+// --- Line-level false-positive suppression ---------------------------------
+// A scanner that reads its own rule table finds its own regexes, and a URL
+// inside a comment is not a network call.
+const COMMENT_LINE = /^\s*(#|\/\/|\/\*|\*(?!\/)|<!--)/;
+const PATTERN_DEF_LINE = /['"]?(pattern|description|severity)['"]?\s*:/i;
+const ENV_REF = /(process\.env\.|os\.getenv|os\.environ|import\.meta\.env|ENV\[)/i;
+const CREDENTIAL_RULES = new Set([
+  "api_key", "token", "secret", "bearer", "password",
+  "authorization", "connection_string", "database_url",
+]);
+const IGNORED_IPS = new Set(["0.0.0.0", "127.0.0.1", "255.255.255.255", "0.0.0.1"]);
+const XSS_STATIC_RHS =
+  /(?:innerHTML|outerHTML)\s*=\s*(?:'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`$\\]|\\.|\$(?!\{))*`)\s*;?\s*$/;
+const INTERPOLATION = /\$\{([^}]*)\}/g;
+
+const XSS_TEMPLATE_RHS = /^(?:innerHTML|outerHTML|document\.write)\s*=\s*`/;
+
+// Looks at the whole template literal rather than the matched line, because
+// these assignments open a backtick and close it several lines later. Only
+// fires when the right-hand side *is* a template literal, so
+// `el.innerHTML = user` is still reported.
+function xssSafeTemplate(content, start) {
+  const window = content.slice(start, start + 4000);
+  const m = window.match(XSS_TEMPLATE_RHS);
+  if (!m) return false;
+
+  const bodyStart = m[0].length;
+  const close = window.indexOf("`", bodyStart);
+  const literal = close !== -1 ? window.slice(bodyStart, close) : window.slice(bodyStart);
+
+  const spans = [...literal.matchAll(INTERPOLATION)].map((s) => s[1]);
+  if (spans.length === 0) return true; // static markup, nothing interpolated
+  return spans.every((s) => s.includes("escapeHtml("));
+}
+
+function isFalsePositive(keyword, lineContent, matchText, content, start) {
+  if (!lineContent) return false;
+
+  if (COMMENT_LINE.test(lineContent) || PATTERN_DEF_LINE.test(lineContent)) return true;
+  if (CREDENTIAL_RULES.has(keyword) && ENV_REF.test(lineContent)) return true;
+  if (keyword === "ip_address" && IGNORED_IPS.has(matchText)) return true;
+
+  if (keyword === "xss") {
+    if (XSS_STATIC_RHS.test(lineContent)) return true;
+    const spans = [...lineContent.matchAll(INTERPOLATION)].map((m) => m[1]);
+    if (spans.length && spans.every((s) => s.includes("escapeHtml("))) return true;
+    if (content !== undefined && start !== undefined
+        && xssSafeTemplate(content, start)) return true;
+  }
+
+  return false;
+}
+
 // Drop repeats of the same rule + file + line + matched value.
 function dedupeFindings(findings) {
   const seen = new Set();
@@ -235,6 +291,7 @@ function scanFileForSecrets(relPath, content) {
     while ((m = re.exec(content)) !== null) {
       const line = content.slice(0, m.index).split("\n").length;
       const lineText = content.split("\n")[line - 1] || "";
+      if (isFalsePositive(keyword, lineText, m[0], content, m.index)) continue;
       findings.push({
         type: "secret",
         keyword,
@@ -259,6 +316,7 @@ function scanFileForVulnerabilities(relPath, content) {
     while ((m = re.exec(content)) !== null) {
       const line = content.slice(0, m.index).split("\n").length;
       const lineText = content.split("\n")[line - 1] || "";
+      if (isFalsePositive(keyword, lineText, m[0], content, m.index)) continue;
       findings.push({
         type: "vulnerability",
         keyword,

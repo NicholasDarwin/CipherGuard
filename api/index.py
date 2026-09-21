@@ -157,6 +157,95 @@ def _in_spans(pos, spans):
     return any(start <= pos < end for start, end in spans)
 
 
+# --- Line-level false-positive suppression -------------------------------
+# A scanner that reads its own rule table finds its own regexes, and a URL
+# inside a comment is not a network call. These skip lines that describe
+# code rather than execute it.
+COMMENT_LINE = re.compile(r'^\s*(#|//|/\*|\*(?!/)|<!--)')
+# Rule-table lines: 'pattern':, 'description':, 'severity':. A scanner's own
+# rule metadata quotes the very constructs it looks for.
+PATTERN_DEF_LINE = re.compile(
+    r'''['"]?(pattern|description|severity)['"]?\s*:''', re.I
+)
+
+# Reading a credential from the environment is the fix, not the bug.
+ENV_REF = re.compile(
+    r'(process\.env\.|os\.getenv|os\.environ|import\.meta\.env|ENV\[)', re.I
+)
+CREDENTIAL_RULES = {
+    'api_key', 'token', 'secret', 'bearer', 'password',
+    'authorization', 'connection_string', 'database_url',
+}
+
+# Bind/placeholder addresses are configuration, not a leaked host.
+IGNORED_IPS = {'0.0.0.0', '127.0.0.1', '255.255.255.255', '0.0.0.1'}
+
+# innerHTML assigned a literal with no interpolation cannot inject anything.
+XSS_STATIC_RHS = re.compile(
+    r'(?:innerHTML|outerHTML)\s*=\s*'
+    r'(?:'
+    r"'(?:[^'\\]|\\.)*'"
+    r'|"(?:[^"\\]|\\.)*"'
+    r'|`(?:[^`$\\]|\\.|\$(?!\{))*`'
+    r')\s*;?\s*$'
+)
+INTERPOLATION = re.compile(r'\$\{([^}]*)\}')
+
+
+XSS_TEMPLATE_RHS = re.compile(r'(?:innerHTML|outerHTML|document\.write)\s*=\s*`')
+
+
+def _xss_safe_template(content, start):
+    """Whether an innerHTML assignment's template literal is safe.
+
+    Looks at the whole literal rather than the matched line, because these
+    assignments open a backtick and close it several lines later. Only fires
+    when the right-hand side *is* a template literal, so assigning a bare
+    variable or a function result is still reported.
+    """
+    window = content[start:start + 4000]
+    m = XSS_TEMPLATE_RHS.match(window)
+    if not m:
+        return False
+
+    close = window.find('`', m.end())
+    literal = window[m.end():close] if close != -1 else window[m.end():]
+
+    spans = INTERPOLATION.findall(literal)
+    if not spans:
+        return True  # static markup, nothing interpolated
+    return all('escapeHtml(' in s for s in spans)
+
+
+def is_false_positive(keyword, line_content, match_text, content=None, start=None):
+    """True when this match is describing code rather than being a defect."""
+    if not line_content:
+        return False
+
+    # The scanner's own rule definitions and any commented-out code.
+    if COMMENT_LINE.match(line_content) or PATTERN_DEF_LINE.search(line_content):
+        return True
+
+    if keyword in CREDENTIAL_RULES and ENV_REF.search(line_content):
+        return True
+
+    if keyword == 'ip_address' and match_text in IGNORED_IPS:
+        return True
+
+    if keyword == 'xss':
+        if XSS_STATIC_RHS.search(line_content):
+            return True
+        # Every interpolated value is escaped before it reaches the DOM.
+        spans = INTERPOLATION.findall(line_content)
+        if spans and all('escapeHtml(' in s for s in spans):
+            return True
+        if content is not None and start is not None:
+            if _xss_safe_template(content, start):
+                return True
+
+    return False
+
+
 def dedupe_findings(findings):
     """Drop repeats of the same rule + file + line + matched value."""
     seen = set()
@@ -181,13 +270,15 @@ VULNERABILITY_PATTERNS = {
         'severity': 'high',
         'description': 'Potential XSS vulnerability'
     },
+    # Not preceded by a dot: regex.ev/al() and re.ex/ec() are method calls on
+    # an object, not the dangerous global builtins.
     'eval_usage': {
-        'pattern': r'\bev' + r'al\s*\(',
+        'pattern': r'(?<![.\w])ev' + r'al\s*\(',
         'severity': 'high',
         'description': 'Dangerous ev' + 'al() usage'
     },
     'exec_usage': {
-        'pattern': r'\bex' + r'ec\s*\(',
+        'pattern': r'(?<![.\w])ex' + r'ec\s*\(',
         'severity': 'high',
         'description': 'Dangerous ex' + 'ec() usage'
     },
@@ -223,7 +314,11 @@ VULNERABILITY_PATTERNS = {
                    r'www\.w3\.org|www\.sitemaps\.org|schemas\.|purl\.org|'
                    r'ns\.adobe\.com|xml\.apache\.org|java\.sun\.com|'
                    r'docbook\.org|www\.openarchives\.org|'
-                   r'www\.inkscape\.org|sodipodi\.sourceforge\.net)',
+                   r'www\.inkscape\.org|sodipodi\.sourceforge\.net)'
+                   # Require a dot in the host: single-label names like
+                   # http://cipherguard-api:4000 are in-cluster service
+                   # addresses, not public traffic.
+                   r'(?=[A-Za-z0-9._~-]*\.)',
         'severity': 'low',
         'description': 'HTTP without TLS'
     },
@@ -332,7 +427,10 @@ def scan_file_for_secrets(filepath, content):
                 line_num = content[:match.start()].count('\n') + 1
                 lines = content.split('\n')
                 line_content = lines[line_num - 1] if line_num <= len(lines) else ''
-                
+
+                if is_false_positive(keyword, line_content, match.group()):
+                    continue
+
                 findings.append({
                     'type': 'secret',
                     'keyword': keyword,
@@ -358,7 +456,11 @@ def scan_file_for_vulnerabilities(filepath, content):
                 line_num = content[:match.start()].count('\n') + 1
                 lines = content.split('\n')
                 line_content = lines[line_num - 1] if line_num <= len(lines) else ''
-                
+
+                if is_false_positive(vuln_type, line_content, match.group(),
+                                     content, match.start()):
+                    continue
+
                 findings.append({
                     'type': 'vulnerability',
                     'keyword': vuln_type,
