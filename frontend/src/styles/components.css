@@ -1,0 +1,76 @@
+/* ---- Grade tile ---------------------------------------------------------- */
+
+.grade {
+  --tone: var(--text-muted);
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border: 1px solid color-mix(in srgb, var(--tone) 45%, transparent);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--tone) 12%, transparent);
+  color: var(--tone);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.grade-sm {
+  width: 26px;
+  height: 26px;
+  font-size: var(--fs-13);
+}
+
+.grade-lg {
+  width: 88px;
+  height: 88px;
+  border-radius: var(--r-lg);
+  font-size: 3rem;
+  letter-spacing: -0.04em;
+}
+
+.grade-none {
+  border-style: dashed;
+  background: transparent;
+}
+
+.tone-ok {
+  --tone: var(--ok);
+}
+.tone-low {
+  --tone: var(--sev-low);
+}
+.tone-medium {
+  --tone: var(--sev-medium);
+}
+.tone-high {
+  --tone: var(--sev-high);
+}
+.tone-critical {
+  --tone: var(--sev-critical);
+}
+
+/* ---- Redaction (secret values) ------------------------------------------ */
+
+.redacted {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: baseline;
+  font-family: var(--font-mono);
+}
+
+.redact-bar {
+  display: inline-block;
+  width: calc(var(--n) * 0.6em);
+  height: 1.05em;
+  margin: 0 1px;
+  border-radius: 2px;
+  background: var(--redact);
+  box-shadow: inset 0 0 0 1px var(--redact-edge);
+  vertical-align: -0.15em;
+}
+
+.redacted-raw {
+  font-family: var(--font-mono);
+  background: var(--code-line-hit);
+  border-radius: 2px;
+}

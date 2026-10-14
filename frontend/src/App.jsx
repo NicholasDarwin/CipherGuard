@@ -10,6 +10,7 @@ import Shared from "./pages/Shared";
 import NotFound from "./pages/NotFound";
 import { FOCUS_COMMAND_EVENT } from "./lib/commands";
 import "./styles/shell.css";
+import "./styles/components.css";
 
 export default function App() {
   const navigate = useNavigate();
