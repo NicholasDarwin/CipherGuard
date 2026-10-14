@@ -1,0 +1,148 @@
+/*
+ * CipherGuard design tokens.
+ *
+ * Color rule: warm hues mean risk and nothing else (critical red through
+ * medium amber). Everything interactive is cobalt. Low and info are neutral
+ * so they recede. Every text color here is >= 4.5:1 on --bg and --surface.
+ */
+
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #0b0d10;
+  --bg-inset: #08090c;
+  --surface: #12151a;
+  --surface-2: #181c22;
+  --surface-3: #1e232a;
+  --border: #23272f;
+  --border-strong: #313741;
+
+  --text: #e6e8eb;
+  --text-muted: #8a919c;
+  --text-faint: #808794;
+
+  --accent: #7c95ff;
+  --accent-hover: #9aadff;
+  --accent-ink: #0b0d10;
+  --accent-soft: rgb(124 149 255 / 0.12);
+  --focus: #9aadff;
+
+  --sev-critical: #f2555a;
+  --sev-high: #f0883e;
+  --sev-medium: #e3b341;
+  --sev-low: #8b9bb4;
+  --sev-info: #8a919c;
+
+  --ok: #6fbf8e;
+
+  /* Redaction bars and code */
+  --redact: #3a404b;
+  --redact-edge: #4a515e;
+  --code-bg: #0e1014;
+  --code-line-hit: rgb(242 85 90 / 0.1);
+  --syn-comment: #6c7480;
+  --syn-keyword: #c792ea;
+  --syn-string: #a5d6a7;
+  --syn-number: #f6c177;
+  --syn-function: #82aaff;
+  --syn-punct: #8a919c;
+  --syn-tag: #ff9e80;
+  --syn-attr: #ffcb6b;
+
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.45);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f6f7f9;
+  --bg-inset: #eef0f3;
+  --surface: #ffffff;
+  --surface-2: #f3f4f7;
+  --surface-3: #e9ecf0;
+  --border: #e1e4e9;
+  --border-strong: #cdd2da;
+
+  --text: #14171c;
+  --text-muted: #5a626e;
+  --text-faint: #636b78;
+
+  --accent: #3352d6;
+  --accent-hover: #2440b8;
+  --accent-ink: #ffffff;
+  --accent-soft: rgb(51 82 214 / 0.08);
+  --focus: #3352d6;
+
+  --sev-critical: #c42129;
+  --sev-high: #b0500c;
+  --sev-medium: #8a6300;
+  --sev-low: #4d5d75;
+  --sev-info: #5a626e;
+
+  --ok: #1f7a46;
+
+  --redact: #d5d9e0;
+  --redact-edge: #c3c8d1;
+  --code-bg: #f8f9fb;
+  --code-line-hit: rgb(196 33 41 / 0.08);
+  --syn-comment: #6b7380;
+  --syn-keyword: #8b2fc9;
+  --syn-string: #1c7a3a;
+  --syn-number: #a35a00;
+  --syn-function: #2b4fd1;
+  --syn-punct: #5a626e;
+  --syn-tag: #b3401c;
+  --syn-attr: #8a6300;
+
+  --shadow-pop: 0 8px 24px rgb(20 23 28 / 0.12);
+}
+
+:root {
+  /* Type: IBM Plex Sans for interface, Plex Mono for anything a machine wrote. */
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --fs-12: 0.75rem;
+  --fs-13: 0.8125rem;
+  --fs-14: 0.875rem;
+  --fs-16: 1rem;
+  --fs-20: 1.25rem;
+  --fs-28: 1.75rem;
+  --fs-44: 2.75rem;
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 72px;
+
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 10px;
+
+  --dur-fast: 150ms;
+  --dur: 200ms;
+  --dur-slow: 250ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  --shell-max: 1200px;
+  --gutter: 16px;
+}
+
+@media (min-width: 720px) {
+  :root {
+    --gutter: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur: 0ms;
+    --dur-slow: 0ms;
+  }
+}

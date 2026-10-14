@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CipherGuard: GitHub repository security scanner</title>
+    <meta name="description" content="Scan a public GitHub repository for leaked secrets, risky code and vulnerable dependencies, checked against OSV, NVD, CISA KEV, EPSS and OpenSSF Scorecard." />
+    <meta name="theme-color" content="#0b0d10" />
+    <meta property="og:title" content="CipherGuard" />
+    <meta property="og:description" content="Find what your repo is leaking: secrets, risky code and vulnerable dependencies, with real exploit data." />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Sets the theme before first paint (external file to satisfy the CSP). -->
+    <script src="/theme-init.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>CipherGuard needs JavaScript to run scans.</noscript>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
