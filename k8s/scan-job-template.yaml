@@ -13,6 +13,7 @@ metadata:
 spec:
   ttlSecondsAfterFinished: 600
   backoffLimit: 1
+  activeDeadlineSeconds: 600
   template:
     metadata:
       labels:
@@ -40,6 +41,18 @@ spec:
                 secretKeyRef:
                   name: cipherguard-secrets
                   key: SNYK_TOKEN
+                  optional: true
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cipherguard-secrets
+                  key: GITHUB_TOKEN
+                  optional: true
+            - name: NVD_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cipherguard-secrets
+                  key: NVD_API_KEY
                   optional: true
           resources:
             requests:

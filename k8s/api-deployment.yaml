@@ -5,7 +5,9 @@ metadata:
   labels:
     app: cipherguard-api
 spec:
-  replicas: 2
+  # Scan state lives in the API process, so worker callbacks must reach the
+  # replica that created the scan. Add a shared store before scaling out.
+  replicas: 1
   selector:
     matchLabels:
       app: cipherguard-api
@@ -15,6 +17,9 @@ spec:
         app: cipherguard-api
     spec:
       serviceAccountName: cipherguard-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
       containers:
         - name: api
           image: cipherguard/api:latest
@@ -31,6 +36,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+          envFrom:
+            - secretRef:
+                name: cipherguard-secrets
+                optional: true
+          securityContext:
+            allowPrivilegeEscalation: false
           resources:
             requests:
               cpu: 100m

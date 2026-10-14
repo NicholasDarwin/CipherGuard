@@ -53,3 +53,10 @@ Thumbs.db
 *.temp
 tmp/
 temp/
+
+# Build output
+frontend/dist/
+
+# Logs
+*.log
+npm-debug.log*
