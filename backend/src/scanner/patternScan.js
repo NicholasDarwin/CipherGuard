@@ -150,8 +150,18 @@ function scanContent(relPath, content, rules, type) {
         sources: [{ name: "CipherGuard rules" }],
       };
       if (type === "secret" && cfg.severity !== "info") {
-        const value = secretValue(m[0]);
-        finding.secret = { value, masked: maskSecret(value) };
+        // For a private key the header is public; the secret is the body below it.
+        // In a URL only the password is secret; keep the user and host readable.
+        const urlPassword = m[0].match(/:\/\/[^:@/\s]+:([^@/\s'"]+)@/);
+        // The ":password@" delimiters stay part of the value so a short
+        // password is never masked wherever the same word appears elsewhere.
+        if (urlPassword) {
+          finding.secret = { value: `:${urlPassword[1]}@`, masked: `:${"*".repeat(urlPassword[1].length)}@` };
+        } else {
+          const value = rule === "private_key" ? (lines[line] || "").trim() || m[0] : secretValue(m[0]);
+          finding.secret = { value, masked: maskSecret(value) };
+        }
+        if (rule === "private_key") finding.match = lineText.trim();
       }
       findings.push(finding);
     }

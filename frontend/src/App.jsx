@@ -8,9 +8,12 @@ import History from "./pages/History";
 import Report from "./pages/Report";
 import Shared from "./pages/Shared";
 import NotFound from "./pages/NotFound";
+import Toaster from "./components/Toaster";
 import { FOCUS_COMMAND_EVENT } from "./lib/commands";
 import "./styles/shell.css";
 import "./styles/components.css";
+import "./styles/report.css";
+import "./styles/print.css";
 
 export default function App() {
   const navigate = useNavigate();
@@ -45,6 +48,7 @@ export default function App() {
         </Routes>
       </main>
       <StatusFooter />
+      <Toaster />
       <Analytics />
     </div>
   );

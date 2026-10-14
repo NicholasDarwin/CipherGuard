@@ -1,0 +1,94 @@
+/* Print / Save as PDF: a light, complete report without interactive controls. */
+@media print {
+  :root,
+  :root[data-theme="dark"],
+  :root[data-theme="light"] {
+    --bg: #fff;
+    --bg-inset: #fff;
+    --surface: #fff;
+    --surface-2: #f3f4f7;
+    --surface-3: #e9ecf0;
+    --border: #d5d9e0;
+    --border-strong: #c3c8d1;
+    --text: #111;
+    --text-muted: #444;
+    --text-faint: #555;
+    --accent: #2440b8;
+    --accent-soft: #f2f4fb;
+    --code-bg: #f8f9fb;
+    --redact: #d5d9e0;
+    --redact-edge: #c3c8d1;
+    --sev-critical: #b3141c;
+    --sev-high: #d4740f;
+    --sev-medium: #7f6a00;
+    --sev-low: #14857a;
+    --sev-info: #a6acb5;
+    --syn-comment: #555;
+    --syn-keyword: #6a1b9a;
+    --syn-string: #1b5e20;
+    --syn-number: #8a4b00;
+    --syn-function: #1a3fa6;
+    --syn-punct: #444;
+    --syn-tag: #a83a17;
+    --syn-attr: #6b5400;
+  }
+
+  @page {
+    margin: 14mm;
+  }
+
+  body {
+    font-size: 11px;
+  }
+
+  .topbar,
+  .statusbar,
+  .skip-link,
+  .report-actions,
+  .toolbar,
+  .findings-bulk,
+  .show-more,
+  .reveal-btn,
+  .toaster,
+  .finding-chevron,
+  .sev-group-chevron {
+    display: none !important;
+  }
+
+  .shell {
+    max-width: none;
+    padding: 0;
+  }
+
+  .report {
+    padding: 0;
+  }
+
+  .panel,
+  .finding,
+  .code {
+    break-inside: avoid;
+  }
+
+  .finding-panel {
+    animation: none;
+    padding-left: 12px;
+  }
+
+  .finding-title {
+    white-space: normal;
+  }
+
+  .code-body {
+    overflow: visible;
+  }
+
+  .code-text {
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  a {
+    color: inherit;
+  }
+}

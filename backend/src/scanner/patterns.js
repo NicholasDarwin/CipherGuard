@@ -82,6 +82,13 @@ const SECRET_PATTERNS = {
     title: "Google API key",
     remediation: ROTATE,
   },
+  url_credentials: {
+    // scheme://user:password@host, excluding obvious placeholders.
+    pattern: /\b[a-z][a-z0-9+.-]*:\/\/(?!user(name)?:pass(word)?@)[^\s:@/'"]+:[^\s:@/'"]{3,}@[^\s/'"]+/i,
+    severity: "high",
+    title: "Credentials embedded in a URL",
+    remediation: ROTATE,
+  },
   password: {
     pattern: /(password|passwd|pwd|pass)\s*[=:]\s*["']?[^\s"']{6,}["']?/i,
     severity: "medium",

@@ -1,9 +1,9 @@
 /*
  * CipherGuard design tokens.
  *
- * Color rule: warm hues mean risk and nothing else (critical red through
- * medium amber). Everything interactive is cobalt. Low and info are neutral
- * so they recede. Every text color here is >= 4.5:1 on --bg and --surface.
+ * Color rule: severity hues mean risk and nothing else. Everything
+ * interactive is cobalt. Info is neutral so it recedes. Every --text* color
+ * is >= 4.5:1 on --bg and --surface; severity colors mark, they never carry text.
  */
 
 :root,
@@ -28,11 +28,13 @@
   --accent-soft: rgb(124 149 255 / 0.12);
   --focus: #9aadff;
 
-  --sev-critical: #f2555a;
-  --sev-high: #f0883e;
-  --sev-medium: #e3b341;
-  --sev-low: #8b9bb4;
-  --sev-info: #8a919c;
+  /* Severity mark colors (fills, bars, dots). Validated for color-vision
+     deficiency as an ordered set; text beside them uses text tokens. */
+  --sev-critical: #ef4f56;
+  --sev-high: #f59a3c;
+  --sev-medium: #ecd36a;
+  --sev-low: #3fb5a9;
+  --sev-info: #5f6672;
 
   --ok: #6fbf8e;
 
@@ -74,11 +76,11 @@
   --accent-soft: rgb(51 82 214 / 0.08);
   --focus: #3352d6;
 
-  --sev-critical: #c42129;
-  --sev-high: #b0500c;
-  --sev-medium: #8a6300;
-  --sev-low: #4d5d75;
-  --sev-info: #5a626e;
+  --sev-critical: #b3141c;
+  --sev-high: #d4740f;
+  --sev-medium: #7f6a00;
+  --sev-low: #14857a;
+  --sev-info: #a6acb5;
 
   --ok: #1f7a46;
 

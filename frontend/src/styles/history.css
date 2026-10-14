@@ -1,0 +1,142 @@
+.history {
+  padding-top: var(--s-6);
+  padding-bottom: var(--s-8);
+}
+
+.history-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-5);
+}
+
+.history-head h1 {
+  font-size: var(--fs-28);
+}
+
+.history-head p {
+  margin-top: var(--s-1);
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  font-size: var(--fs-13);
+}
+
+.history-table th {
+  padding: var(--s-2) var(--s-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  text-align: left;
+}
+
+.history-table td {
+  padding: var(--s-3) var(--s-4);
+  vertical-align: middle;
+}
+
+.history-table tbody tr + tr td {
+  border-top: 1px solid var(--border);
+}
+
+.history-table tbody tr:hover td {
+  background: var(--surface);
+}
+
+.history-table th:first-child,
+.history-table td:first-child {
+  width: 1%;
+  padding-right: 0;
+}
+
+.col-repo a {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.findings-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.minibar {
+  display: inline-flex;
+  gap: 2px;
+  width: 96px;
+  height: 6px;
+}
+
+.minibar span {
+  min-width: 3px;
+  background: var(--sev);
+}
+
+.minibar span:first-child {
+  border-radius: 3px 0 0 3px;
+}
+
+.minibar span:last-child {
+  border-radius: 0 3px 3px 0;
+}
+
+.minibar span:only-child {
+  border-radius: 3px;
+}
+
+.minibar-empty {
+  border-radius: 3px;
+  background: var(--surface-3);
+}
+
+.col-actions {
+  width: 1%;
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .col-time,
+  .minibar {
+    display: none;
+  }
+  .history-table th,
+  .history-table td {
+    padding-left: var(--s-3);
+    padding-right: var(--s-3);
+  }
+}
+
+.history-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-8) var(--s-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-lg);
+  text-align: center;
+}
+
+.history-empty svg {
+  width: 28px;
+  height: 28px;
+  color: var(--text-muted);
+}
+
+.history-empty h2 {
+  font-size: var(--fs-16);
+}
+
+.history-empty .btn {
+  margin-top: var(--s-2);
+}

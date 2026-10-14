@@ -7,8 +7,8 @@
   flex: none;
   border: 1px solid color-mix(in srgb, var(--tone) 45%, transparent);
   border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--tone) 12%, transparent);
-  color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 14%, transparent);
+  color: var(--text);
   font-family: var(--font-mono);
   font-weight: 500;
   line-height: 1;
