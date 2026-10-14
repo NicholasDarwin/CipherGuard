@@ -1,0 +1,173 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-main {
+  flex: 1;
+  outline: none;
+}
+
+.shell {
+  width: 100%;
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  padding-left: var(--gutter);
+  padding-right: var(--gutter);
+}
+
+/* ---- Top bar ------------------------------------------------------------ */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: saturate(140%) blur(10px);
+  -webkit-backdrop-filter: saturate(140%) blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--s-5);
+  height: 52px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--text);
+  font-weight: 600;
+  font-size: var(--fs-14);
+  letter-spacing: -0.01em;
+}
+
+.brand:hover {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.topnav {
+  display: flex;
+  gap: var(--s-1);
+}
+
+.topnav a {
+  padding: 6px var(--s-2);
+  border-radius: var(--r-md);
+  color: var(--text-muted);
+  font-size: var(--fs-13);
+  font-weight: 500;
+  transition: color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+
+.topnav a:hover {
+  color: var(--text);
+  background: var(--surface-2);
+  text-decoration: none;
+}
+
+.topnav a.active {
+  color: var(--text);
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  margin-left: auto;
+}
+
+@media (max-width: 520px) {
+  .topbar-inner {
+    gap: var(--s-3);
+  }
+  .brand span {
+    display: none;
+  }
+  .new-scan .kbd,
+  .new-scan-label {
+    display: none;
+  }
+  .new-scan {
+    width: 32px;
+    padding: 0;
+  }
+}
+
+/* ---- Status footer ------------------------------------------------------ */
+
+.statusbar {
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+}
+
+.statusbar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-4);
+  min-height: 44px;
+  padding-top: var(--s-2);
+  padding-bottom: var(--s-2);
+}
+
+.statusbar-spacer {
+  flex: 1;
+}
+
+.statusbar a {
+  color: var(--text-muted);
+}
+
+.statusbar a:hover {
+  color: var(--text);
+}
+
+.status-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.status-up::before {
+  background: var(--ok);
+}
+
+.status-down::before {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--sev-medium);
+}
+
+/* ---- Generic empty / error pages --------------------------------------- */
+
+.page-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding-top: var(--s-8);
+  padding-bottom: var(--s-8);
+}
+
+.page-empty h1 {
+  font-size: var(--fs-28);
+}
+
+.page-empty .btn {
+  margin-top: var(--s-2);
+}
