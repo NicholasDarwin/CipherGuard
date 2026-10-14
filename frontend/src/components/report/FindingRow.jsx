@@ -195,15 +195,14 @@ export default function FindingRow({ f, open, onToggle, secrets }) {
                 <Sparkles aria-hidden="true" /> AI explanation
                 {f.ai.falsePositive && <span className="muted"> · false positive {f.ai.falsePositive}</span>}
               </p>
-              <p>
-                <RedactedText text={f.ai.explanation} secrets={secrets} revealed={revealed} />
-              </p>
+              {/* Gemini only ever sees masked secrets, so its text is safe to render as Markdown. */}
+              <Markdown text={f.ai.explanation} />
             </section>
           )}
 
           <section className="remediation" aria-label="Remediation">
             <p className="remediation-head">How to fix</p>
-            <p>{f.ai?.fix || f.remediation || "Review this finding manually."}</p>
+            <Markdown text={f.ai?.fix || f.remediation || "Review this finding manually."} />
           </section>
 
           {f.sources?.length > 0 && (

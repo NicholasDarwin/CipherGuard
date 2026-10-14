@@ -1319,3 +1319,8 @@ a.source-chip:hover {
 .toast-warn {
   border-color: color-mix(in srgb, var(--sev-medium) 50%, var(--border));
 }
+
+.ai-note .md > :last-child,
+.remediation .md > :last-child {
+  margin-bottom: 0;
+}
