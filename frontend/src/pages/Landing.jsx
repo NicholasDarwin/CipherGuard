@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { ArrowRight } from "lucide-react";
 import CommandBar from "../components/CommandBar";
+import HeroSample from "../components/HeroSample";
 import Grade from "../components/Grade";
 import { STEPS } from "../lib/scans";
 import { listHistory } from "../lib/history";
@@ -17,6 +18,7 @@ export default function Landing() {
     <>
       <section className="hero">
         <div className="shell hero-inner">
+          <div className="hero-copy">
           <p className="eyebrow">Security scanner for public GitHub repositories</p>
           <h1 className="hero-title">
             Find what your repo is{" "}
@@ -30,6 +32,8 @@ export default function Landing() {
             what attackers actually use first.
           </p>
           <CommandBar autoFocus examples />
+          </div>
+          <HeroSample />
         </div>
       </section>
 
