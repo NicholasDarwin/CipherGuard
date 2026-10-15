@@ -4,6 +4,7 @@ FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY frontend/package.json frontend/
+COPY backend/package.json backend/
 RUN npm ci -w frontend --include-workspace-root=false
 
 COPY frontend/ frontend/

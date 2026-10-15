@@ -9,6 +9,7 @@ RUN npm install -g snyk@1 && npm cache clean --force
 
 COPY package.json package-lock.json ./
 COPY backend/package.json backend/
+COPY frontend/package.json frontend/
 RUN npm ci --omit=dev -w backend --include-workspace-root=false
 
 COPY backend/ backend/

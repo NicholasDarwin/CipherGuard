@@ -70,7 +70,9 @@ export default function History() {
       <div className="history-head">
         <div>
           <h1>Scans</h1>
-          <p className="muted">Scans run from this browser. Saved reports have secret values redacted.</p>
+          <p className="muted">
+            {cluster ? "Scans on this server and from this browser." : "Scans run from this browser."} Saved reports have secret values redacted.
+          </p>
         </div>
         {entries.length > 0 && (
           <button

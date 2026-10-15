@@ -48,7 +48,8 @@ if (process.env.DISABLE_K8S !== "true") {
     console.log(`[api] Kubernetes unavailable (${err.message}); scans run in-process`);
   }
 }
-const MODE = batchApi ? "cluster" : "stream";
+// SCAN_MODE=cluster exercises the POST/poll flow locally without a cluster.
+const MODE = batchApi || process.env.SCAN_MODE === "cluster" ? "cluster" : "stream";
 
 const WORKER_IMAGE = process.env.WORKER_IMAGE || "cipherguard/scanner-worker:latest";
 const API_CALLBACK_URL = process.env.API_CALLBACK_URL || `http://cipherguard-api:${PORT}`;
