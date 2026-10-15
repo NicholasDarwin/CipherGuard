@@ -28,7 +28,7 @@ function packageLock(text, file) {
       if (!key || !meta.version || meta.link) continue;
       const name = meta.name || key.slice(key.lastIndexOf("node_modules/") + "node_modules/".length);
       const isDirect = key === `node_modules/${name}` && direct.has(name);
-      out.push({ ecosystem: "npm", name, version: meta.version, file, direct: isDirect, dev: !!meta.dev });
+      out.push({ ecosystem: "npm", name, version: meta.version, file, direct: isDirect, dev: !!meta.dev, lockKey: key });
     }
   } else if (lock.dependencies) {
     // lockfileVersion 1: nested tree.
@@ -157,7 +157,49 @@ const PARSERS = {
   "composer.lock": composerLock,
 };
 
-const NPM_LOCKS = ["package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "pnpm-lock.yaml"];
+// Line-start offsets per manifest text, cleared after each extraction.
+const lineIndexCache = new Map();
+
+function declarationLine(text, dep) {
+  if (!text) return 0;
+  const name = dep.name;
+  const base = basename(dep.file);
+  const needles = {
+    "package-lock.json": [dep.lockKey && `"${dep.lockKey}": {`, `"node_modules/${name}": {`, `"${name}": {`],
+    "npm-shrinkwrap.json": [dep.lockKey && `"${dep.lockKey}": {`, `"node_modules/${name}": {`, `"${name}": {`],
+    "package.json": [`"${name}":`],
+    "yarn.lock": [`"${name}@`, `${name}@`],
+    "pnpm-lock.yaml": [`/${name}@${dep.version}`, `${name}@${dep.version}`],
+    "Pipfile.lock": [`"${name}": {`],
+    "poetry.lock": [`name = "${name}"`],
+    "Cargo.lock": [`name = "${name}"\nversion = "${dep.version}"`, `name = "${name}"`],
+    "go.mod": [`${name} ${dep.version}`],
+    "Gemfile.lock": [`    ${name} (${dep.version}`],
+    "composer.lock": [`"name": "${name}"`],
+  }[base] || [name];
+
+  for (const needle of [...needles, name].filter(Boolean)) {
+    const idx = text.indexOf(needle);
+    if (idx === -1) continue;
+    let starts = lineIndexCache.get(text);
+    if (!starts) {
+      starts = [0];
+      for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) === 10) starts.push(i + 1);
+      lineIndexCache.set(text, starts);
+    }
+    let lo = 0;
+    let hi = starts.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (starts[mid] <= idx) lo = mid;
+      else hi = mid - 1;
+    }
+    return lo + 1;
+  }
+  return 0;
+}
+
+const NPM_LOCKS =["package-lock.json", "npm-shrinkwrap.json", "yarn.lock", "pnpm-lock.yaml"];
 
 /** Collect dependencies from every manifest in the repo. */
 function extractDependencies(files, manifests) {
@@ -178,6 +220,10 @@ function extractDependencies(files, manifests) {
     if (found.length) manifestsFound.push({ file: rel, count: found.length });
     deps.push(...found);
   }
+
+  // Line where each package is declared, so reports can link straight to it.
+  for (const d of deps) d.line = declarationLine(all.get(d.file), d);
+  lineIndexCache.clear();
 
   // Mark packages that are direct anywhere as direct, then dedupe.
   const directKeys = new Set(deps.filter((d) => d.direct).map((d) => `${d.ecosystem}|${d.name}`));

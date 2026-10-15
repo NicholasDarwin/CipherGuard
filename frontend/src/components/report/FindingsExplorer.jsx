@@ -174,7 +174,7 @@ export default function FindingsExplorer({ report, secrets, severityFilter, setS
                 <>
                   <ul className="finding-list">
                     {items.slice(0, limit).map((f) => (
-                      <FindingRow key={f.id} f={f} open={open.has(f.id)} onToggle={() => toggle(f.id)} secrets={secrets} />
+                      <FindingRow key={f.id} f={f} open={open.has(f.id)} onToggle={() => toggle(f.id)} secrets={secrets} report={report} />
                     ))}
                   </ul>
                   {items.length > limit && (

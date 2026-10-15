@@ -836,6 +836,38 @@
   }
 }
 
+/* Link to the flagged file and line on GitHub, directly under each finding */
+.gh-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 2 * var(--s-4) - 16px - var(--s-3));
+  margin: calc(var(--s-2) * -1) 0 var(--s-3) calc(var(--s-4) + 16px + var(--s-3));
+  color: var(--accent);
+  font-size: var(--fs-12);
+}
+
+.gh-link > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gh-link svg {
+  flex: none;
+}
+
+.gh-link svg.lucide {
+  width: 12px;
+  height: 12px;
+}
+
+@media (max-width: 720px) {
+  .gh-link {
+    max-width: calc(100% - var(--s-4) - 16px - var(--s-3) - var(--s-4));
+  }
+}
+
 /* Expanded panel */
 .finding-panel {
   display: grid;

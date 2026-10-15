@@ -115,3 +115,24 @@ test("sanitizeReport removes secret values everywhere", () => {
   assert.equal(out.findings[0].secret.value, undefined);
   assert.equal(out.redacted, true);
 });
+
+test("dependencies record the lockfile line of the exact installed copy", () => {
+  const lock = JSON.stringify(
+    {
+      lockfileVersion: 3,
+      packages: {
+        "": { dependencies: { minimist: "^1.2.0" } },
+        "node_modules/minimist": { version: "1.2.0" },
+        "node_modules/mkdirp/node_modules/minimist": { version: "0.0.8" },
+      },
+    },
+    null,
+    2
+  );
+  const { dependencies } = extractDependencies(new Map(), new Map([["package-lock.json", lock]]));
+  const lines = lock.split("\n");
+  for (const d of dependencies) {
+    assert.match(lines[d.line - 1], new RegExp(`"${d.lockKey}": \{`));
+    assert.match(lines[d.line], new RegExp(`"version": "${d.version.replace(/\./g, "\.")}"`));
+  }
+});

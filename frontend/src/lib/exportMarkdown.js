@@ -1,5 +1,6 @@
 import { sanitizeReport } from "./sanitize";
 import { SEVERITIES, SEVERITY_LABEL } from "./severity";
+import { githubFileUrl } from "./github";
 
 const esc = (s) => String(s ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ");
 
@@ -40,7 +41,8 @@ export function reportToMarkdown(raw) {
       out.push(`### ${esc(f.title)}`);
       out.push("");
       out.push(`- Rule: \`${f.rule}\`  `);
-      out.push(`- Location: \`${location(f)}\`  `);
+      const href = githubFileUrl(r, f.file, f.line);
+      out.push(`- Location: ${href ? `[\`${location(f)}\`](${href})` : `\`${location(f)}\``}  `);
       if (tags) out.push(`- ${tags}  `);
       if (f.package?.fixedVersion) out.push(`- Fixed in: ${f.package.fixedVersion}  `);
       if (f.match && f.type !== "dependency") out.push(`- Match: \`${esc(f.match)}\`  `);

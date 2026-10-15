@@ -112,7 +112,20 @@ async function fetchRepo(target, { signal } = {}) {
 
   // Manifests that are also worth pattern-scanning (package.json, go.mod...)
   // live in `files`; dependency parsing reads both maps.
-  return { files, manifests, skipped, archiveBytes: buf.byteLength };
+  return { files, manifests, skipped, archiveBytes: buf.byteLength, commit: zipCommit(buf) };
+}
+
+// GitHub writes the commit SHA into the zip comment (end of central directory
+// record), which lets reports link to the exact lines that were scanned.
+function zipCommit(buf) {
+  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) {
+    if (buf[i] === 0x50 && buf[i + 1] === 0x4b && buf[i + 2] === 0x05 && buf[i + 3] === 0x06) {
+      const len = buf[i + 20] | (buf[i + 21] << 8);
+      const comment = new TextDecoder().decode(buf.subarray(i + 22, i + 22 + len)).trim();
+      return /^[0-9a-f]{40}$/.test(comment) ? comment : null;
+    }
+  }
+  return null;
 }
 
 module.exports = { fetchRepo, parseGitHubUrl, RepoError };

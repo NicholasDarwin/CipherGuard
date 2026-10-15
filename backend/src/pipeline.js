@@ -113,6 +113,7 @@ async function runScan(repoUrl, { emit = () => {}, extraDependencyScan, signal }
       repository: target.url,
       target: { owner: target.owner, repo: target.repo, slug: target.slug },
       scanTimestamp: new Date().toISOString(),
+      commit: repo.commit,
       totalFilesScanned: repo.files.size,
       filesSkipped: repo.skipped,
       dependenciesScanned: deps.dependencies.length,

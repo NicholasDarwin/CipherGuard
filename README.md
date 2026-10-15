@@ -20,7 +20,7 @@ Security scanner for public GitHub repositories. CipherGuard finds leaked secret
 | 5. OSINT enrichment | Looks up every dependency and CVE in eight public data sources (below) |
 | 6. AI analysis | One Gemini request explains the top findings, grounded in the data above |
 
-The report gives an A–F grade and 0–100 risk score, a severity breakdown, and findings grouped by severity. Each finding shows file and line, a highlighted code snippet, CVSS, EPSS, known-exploited status, the fixed version, remediation, and links to every source. Reports export to Markdown or PDF and can be shared by link.
+The report gives an A–F grade and 0–100 risk score, a severity breakdown, and findings grouped by severity. Each finding shows file and line with a link to that exact line on GitHub (pinned to the scanned commit), a highlighted code snippet, CVSS, EPSS, known-exploited status, the fixed version, remediation, and links to every source. Reports export to Markdown or PDF and can be shared by link.
 
 <table>
   <tr>

@@ -243,7 +243,7 @@ function toFinding({ dep, vuln, fixed, ghsa, nvd, kev, epss }) {
     title: vuln.summary || `Vulnerability in ${dep.name}`,
     description: vuln.details || vuln.summary,
     file: dep.file,
-    line: 0,
+    line: dep.line || 0,
     match: `${dep.name}@${dep.version}`,
     context: "",
     package: { ecosystem: dep.ecosystem, name: dep.name, version: dep.version, fixedVersion: fixed, direct: dep.direct, dev: !!dep.dev },

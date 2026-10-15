@@ -5,6 +5,8 @@ import Markdown from "../Markdown";
 import { RedactedText, RedactedValue } from "../Redacted";
 import { SEVERITY_LABEL, TYPE_LABEL } from "../../lib/severity";
 import { pct } from "../../lib/format";
+import { githubFileUrl } from "../../lib/github";
+import { GitHubMark } from "../Logo";
 
 export function SeverityBadge({ severity }) {
   return (
@@ -137,11 +139,12 @@ export function SourceTag({ name, href }) {
   );
 }
 
-export default function FindingRow({ f, open, onToggle, secrets }) {
+export default function FindingRow({ f, open, onToggle, secrets, report }) {
   const panelId = useId();
   const [revealed, setRevealed] = useState(false);
   const a = f.advisory;
   const canReveal = f.type === "secret" && f.secret?.value;
+  const sourceUrl = githubFileUrl(report, f.file, f.line);
 
   return (
     <li className={`finding sev-edge-${f.severity}${open ? " is-open" : ""}`}>
@@ -169,6 +172,16 @@ export default function FindingRow({ f, open, onToggle, secrets }) {
           <SeverityBadge severity={f.severity} />
         </span>
       </button>
+
+      {sourceUrl && (
+        <a className="gh-link" href={sourceUrl} target="_blank" rel="noreferrer">
+          <GitHubMark size={13} />
+          <span>
+            View <span className="mono">{f.line ? `${f.file}:${f.line}` : f.file}</span> on GitHub
+          </span>
+          <ExternalLink aria-hidden="true" />
+        </a>
+      )}
 
       {open && (
         <div className="finding-panel" id={panelId}>
