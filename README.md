@@ -131,6 +131,7 @@ All variables are optional. See [`.env.example`](.env.example).
 | `KV_REST_API_URL`, `KV_REST_API_TOKEN` | Server-stored share links (Vercel KV / Upstash) |
 | `SCAN_BUDGET_MS`, `ENRICH_BUDGET_MS`, `MAX_REPO_MB` | Time and size limits per scan |
 | `PORT`, `WORKER_IMAGE`, `API_CALLBACK_URL`, `JOB_NAMESPACE`, `CORS_ORIGIN` | Express API and Kubernetes |
+| `SCAN_MODE=cluster` | Use the Kubernetes POST/poll flow locally without a cluster |
 
 ## API
 
